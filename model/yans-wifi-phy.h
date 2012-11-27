@@ -35,7 +35,8 @@
 #include "wifi-preamble.h"
 #include "wifi-phy-standard.h"
 #include "interference-helper.h"
-
+#include "ns3/tag.h"
+#include "ns3/double.h"
 
 namespace ns3 {
 
@@ -125,6 +126,7 @@ public:
   virtual void SetReceiveOkCallback (WifiPhy::RxOkCallback callback);
   virtual void SetReceiveErrorCallback (WifiPhy::RxErrorCallback callback);
   virtual void SendPacket (Ptr<const Packet> packet, WifiMode mode, enum WifiPreamble preamble, uint8_t txPowerLevel);
+  virtual void EndTransmission (Ptr<const Packet> packet);
   virtual void RegisterListener (WifiPhyListener *listener);
   virtual bool IsStateCcaBusy (void);
   virtual bool IsStateIdle (void);

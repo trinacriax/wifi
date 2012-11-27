@@ -35,6 +35,7 @@
 #include "ns3/net-device.h"
 #include "ns3/trace-source-accessor.h"
 #include <math.h>
+#include "snr-tag.h"
 
 NS_LOG_COMPONENT_DEFINE ("YansWifiPhy");
 
@@ -507,6 +508,7 @@ YansWifiPhy::SendPacket (Ptr<const Packet> packet, WifiMode txMode, WifiPreamble
   NS_ASSERT (!m_state->IsStateTx () && !m_state->IsStateSwitching ());
 
   Time txDuration = CalculateTxDuration (packet->GetSize (), txMode, preamble);
+  Simulator::Schedule(txDuration, &YansWifiPhy::EndTransmission, this, packet);
   if (m_state->IsStateRx ())
     {
       m_endRxEvent.Cancel ();
@@ -518,6 +520,12 @@ YansWifiPhy::SendPacket (Ptr<const Packet> packet, WifiMode txMode, WifiPreamble
   NotifyMonitorSniffTx (packet, (uint16_t)GetChannelFrequencyMhz (), GetChannelNumber (), dataRate500KbpsUnits, isShortPreamble);
   m_state->SwitchToTx (txDuration, packet, txMode, preamble, txPower);
   m_channel->Send (this, packet, GetPowerDbm (txPower) + m_txGainDb, txMode, preamble);
+}
+
+void
+YansWifiPhy::EndTransmission (Ptr<const Packet> packet)
+{
+	NotifyTxEnd (packet);
 }
 
 uint32_t
@@ -786,6 +794,10 @@ YansWifiPhy::EndReceive (Ptr<Packet> packet, Ptr<InterferenceHelper::Event> even
       bool isShortPreamble = (WIFI_PREAMBLE_SHORT == event->GetPreambleType ());
       double signalDbm = RatioToDb (event->GetRxPowerW ()) + 30;
       double noiseDbm = RatioToDb (event->GetRxPowerW () / snrPer.snr) - GetRxNoiseFigure () + 30;
+      SnrTag snrTag;
+      snrTag.SetSinr (snrPer.snr);
+      packet->RemovePacketTag(snrTag);
+      packet->AddPacketTag(snrTag);
       NotifyMonitorSniffRx (packet, (uint16_t)GetChannelFrequencyMhz (), GetChannelNumber (), dataRate500KbpsUnits, isShortPreamble, signalDbm, noiseDbm);
       m_state->SwitchFromRxEndOk (packet, snrPer.snr, event->GetPayloadMode (), event->GetPreambleType ());
     }
