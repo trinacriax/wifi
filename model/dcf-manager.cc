@@ -27,6 +27,7 @@
 #include "wifi-phy.h"
 #include "wifi-mac.h"
 #include "mac-low.h"
+#include "ns3/trace-source-accessor.h"
 
 NS_LOG_COMPONENT_DEFINE ("DcfManager");
 
@@ -293,6 +294,12 @@ DcfManager::SetupLowListener (Ptr<MacLow> low)
 {
   m_lowListener = new LowDcfListener (this);
   low->RegisterDcfListener (m_lowListener);
+}
+
+void
+DcfManager::SetBusyCallback (BusyChannel callback)
+{
+  m_busyCallback = callback;
 }
 
 void
@@ -574,6 +581,8 @@ DcfManager::DoRestartAccessTimeoutIfNeeded (void)
     {
       MY_DEBUG ("expected backoff end=" << expectedBackoffEnd);
       Time expectedBackoffDelay = expectedBackoffEnd - Simulator::Now ();
+      if (!m_busyCallback.IsNull())
+    	  m_busyCallback (expectedBackoffDelay);
       if (m_accessTimeout.IsRunning ()
           && Simulator::GetDelayLeft (m_accessTimeout) > expectedBackoffDelay)
         {
@@ -595,6 +604,13 @@ DcfManager::NotifyRxStartNow (Time duration)
   m_lastRxStart = Simulator::Now ();
   m_lastRxDuration = duration;
   m_rxing = true;
+
+  if(GetAccessGrantStart()!=Simulator::Now())
+  {
+    NS_LOG_DEBUG("DURATION "<<m_lastRxDuration + m_sifs << " until "<< (m_lastNavStart+m_lastNavDuration) << " Access " << GetAccessGrantStart());
+    if (!m_busyCallback.IsNull())
+    	m_busyCallback (m_lastRxDuration + m_sifs);
+  }
 }
 void
 DcfManager::NotifyRxEndOkNow (void)
@@ -630,6 +646,12 @@ DcfManager::NotifyTxStartNow (Time duration)
   UpdateBackoff ();
   m_lastTxStart = Simulator::Now ();
   m_lastTxDuration = duration;
+
+  if(GetAccessGrantStart()!=Simulator::Now())
+  {
+  	if (!m_busyCallback.IsNull())
+  		m_busyCallback ((m_lastTxStart + m_lastTxDuration + m_sifs < GetAccessGrantStart() ?  m_lastTxDuration + m_sifs : (GetAccessGrantStart()-Simulator::Now())));
+  }
 }
 void
 DcfManager::NotifyMaybeCcaBusyStartNow (Time duration)
@@ -698,6 +720,11 @@ DcfManager::NotifySwitchingStartNow (Time duration)
   m_lastSwitchingStart = Simulator::Now ();
   m_lastSwitchingDuration = duration;
 
+  if(GetAccessGrantStart()!=Simulator::Now())
+  {
+  	if (!m_busyCallback.IsNull())
+  		m_busyCallback (m_lastSwitchingDuration);
+  }
 }
 
 void
@@ -715,6 +742,12 @@ DcfManager::NotifyNavResetNow (Time duration)
    * to restart a new access timeout.
    */
   DoRestartAccessTimeoutIfNeeded ();
+
+  if(GetAccessGrantStart()!=(m_lastNavStart+m_lastNavDuration+m_sifs))
+  {
+    if(!m_busyCallback.IsNull())
+    	m_busyCallback (m_lastNavDuration);
+  }
 }
 void
 DcfManager::NotifyNavStartNow (Time duration)
@@ -729,6 +762,11 @@ DcfManager::NotifyNavStartNow (Time duration)
       m_lastNavStart = Simulator::Now ();
       m_lastNavDuration = duration;
     }
+  if(GetAccessGrantStart()!=(m_lastNavStart+m_lastNavDuration+m_sifs))
+  {
+    if (!m_busyCallback.IsNull())
+    	m_busyCallback (m_lastNavDuration);
+  }
 }
 void
 DcfManager::NotifyAckTimeoutStartNow (Time duration)
