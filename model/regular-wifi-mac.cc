@@ -53,6 +53,7 @@ RegularWifiMac::RegularWifiMac ()
 
   m_dcfManager = new DcfManager ();
   m_dcfManager->SetupLowListener (m_low);
+  m_dcfManager->SetBusyCallback (MakeCallback (&RegularWifiMac::BusyChannel, this));
 
   m_dca = CreateObject<DcaTxop> ();
   m_dca->SetLow (m_low);
@@ -636,6 +637,9 @@ RegularWifiMac::GetTypeId (void)
     .AddTraceSource ("TxErrHeader",
                      "The header of unsuccessfully transmitted packet",
                      MakeTraceSourceAccessor (&RegularWifiMac::m_txErrCallback))
+	.AddTraceSource ("BusyChannel",
+					 "Time the channel will be busy",
+					 MakeTraceSourceAccessor (&RegularWifiMac::m_busyCallback))
   ;
 
   return tid;
@@ -704,6 +708,13 @@ RegularWifiMac::TxFailed (const WifiMacHeader &hdr)
 {
   NS_LOG_FUNCTION (this << hdr);
   m_txErrCallback (hdr);
+}
+
+void
+RegularWifiMac::BusyChannel (const Time &duration)
+{
+  NS_LOG_FUNCTION (this << duration);
+  m_busyCallback (duration);
 }
 
 } // namespace ns3
