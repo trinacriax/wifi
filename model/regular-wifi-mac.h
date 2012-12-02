@@ -280,6 +280,7 @@ protected:
   virtual void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);
   virtual void TxOk (const WifiMacHeader &hdr);
   virtual void TxFailed (const WifiMacHeader &hdr);
+  virtual void AccessChannel (Ptr<const Packet> packet, const Time &duration);
   virtual void BusyChannel (const Time &duration);
   virtual void BackoffChannel (const Time &duration);
   virtual void DIFSChannel (const Time &duration);
@@ -350,6 +351,7 @@ private:
 
   TracedCallback<const WifiMacHeader &> m_txOkCallback;
   TracedCallback<const WifiMacHeader &> m_txErrCallback;
+  TracedCallback<Ptr<const Packet>, const Time &> m_accessCallback;
   TracedCallback<const Time &> m_busyCallback;
   TracedCallback<const Time &> m_backoffCallback;
   TracedCallback<const Time &> m_difsCallback;

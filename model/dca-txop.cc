@@ -189,6 +189,12 @@ DcaTxop::SetTxFailedCallback (TxFailed callback)
   m_txFailedCallback = callback;
 }
 
+void
+DcaTxop::SetAccessCallback (TxAccess callback)
+{
+  m_accessCallback = callback;
+}
+
 Ptr<WifiMacQueue >
 DcaTxop::GetQueue () const
 {
@@ -258,6 +264,9 @@ DcaTxop::RestartAccessIfNeeded (void)
        || !m_queue->IsEmpty ())
       && !m_dcf->IsAccessRequested ())
     {
+	  WifiMacHeader tmp;
+	  Ptr<const Packet> p = m_queue->Peek(&tmp);
+	  m_accessCallback (p,Simulator::Now());
       m_manager->RequestAccess (m_dcf);
     }
 }

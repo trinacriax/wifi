@@ -62,6 +62,7 @@ RegularWifiMac::RegularWifiMac ()
   m_dca->SetManager (m_dcfManager);
   m_dca->SetTxOkCallback (MakeCallback (&RegularWifiMac::TxOk, this));
   m_dca->SetTxFailedCallback (MakeCallback (&RegularWifiMac::TxFailed, this));
+  m_dca->SetAccessCallback (MakeCallback (&RegularWifiMac::AccessChannel, this));
 
   // Construct the EDCAFs. The ordering is important - highest
   // priority (see Table 9-1 in IEEE 802.11-2007) must be created
@@ -639,6 +640,9 @@ RegularWifiMac::GetTypeId (void)
     .AddTraceSource ("TxErrHeader",
                      "The header of unsuccessfully transmitted packet",
                      MakeTraceSourceAccessor (&RegularWifiMac::m_txErrCallback))
+	.AddTraceSource ("AccessChannel",
+					 "The node tries to access to the channel",
+					 MakeTraceSourceAccessor (&RegularWifiMac::m_accessCallback))
 	.AddTraceSource ("BusyChannel",
 					 "Time the channel will be busy",
 					 MakeTraceSourceAccessor (&RegularWifiMac::m_busyCallback))
@@ -649,7 +653,6 @@ RegularWifiMac::GetTypeId (void)
 					 "Time the channel will be in DIFS",
 					 MakeTraceSourceAccessor (&RegularWifiMac::m_difsCallback))
 ;
-  ;
 
   return tid;
 }
@@ -726,6 +729,12 @@ RegularWifiMac::BusyChannel (const Time &duration)
   m_busyCallback (duration);
 }
 
+void
+RegularWifiMac::AccessChannel (Ptr<const Packet> p, const Time& duration)
+{
+  NS_LOG_FUNCTION (this << duration);
+  m_accessCallback (p, duration);
+}
 
 void
 RegularWifiMac::BackoffChannel (const Time &duration)

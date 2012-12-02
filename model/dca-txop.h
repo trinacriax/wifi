@@ -71,6 +71,7 @@ public:
 
   typedef Callback <void, const WifiMacHeader&> TxOk;
   typedef Callback <void, const WifiMacHeader&> TxFailed;
+  typedef Callback <void, Ptr<const Packet>, const Time&> TxAccess;
 
   DcaTxop ();
   ~DcaTxop ();
@@ -89,6 +90,7 @@ public:
    * packet transmission was completed unsuccessfully.
    */
   void SetTxFailedCallback (TxFailed callback);
+  void SetAccessCallback (TxAccess callback);
 
   Ptr<WifiMacQueue > GetQueue () const;
   virtual void SetMinCw (uint32_t minCw);
@@ -166,6 +168,7 @@ private:
   DcfManager *m_manager;
   TxOk m_txOkCallback;
   TxFailed m_txFailedCallback;
+  TxAccess m_accessCallback;
   Ptr<WifiMacQueue> m_queue;
   MacTxMiddle *m_txMiddle;
   Ptr <MacLow> m_low;
