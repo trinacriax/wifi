@@ -624,8 +624,8 @@ DcfManager::DoRestartAccessTimeoutIfNeeded (void)
     {
       MY_DEBUG ("expected backoff end=" << expectedBackoffEnd);
       Time expectedBackoffDelay = expectedBackoffEnd - Simulator::Now ();
-      if (!m_busyCallback.IsNull())
-    	  m_busyCallback (expectedBackoffDelay);
+      Time difs = (expectedBackoffEnd - GetAccessGrantStart() + m_sifs);///REMOVE
+
       if (m_accessTimeout.IsRunning ()
           && Simulator::GetDelayLeft (m_accessTimeout) > expectedBackoffDelay)
         {
