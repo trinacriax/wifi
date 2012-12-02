@@ -303,6 +303,18 @@ DcfManager::SetBusyCallback (BusyChannel callback)
 }
 
 void
+DcfManager::SetBackoffCallback (BackoffChannel callback)
+{
+  m_backoffCallback = callback;
+}
+
+void
+DcfManager::SetDIFSCallback (DIFSChannel callback)
+{
+  m_difsCallback = callback;
+}
+
+void
 DcfManager::SetSlot (Time slotTime)
 {
   m_slotTimeUs = slotTime.GetMicroSeconds ();
@@ -545,11 +557,31 @@ DcfManager::UpdateBackoff (void)
       Time backoffStart = GetBackoffStartFor (state);
       if (backoffStart <= Simulator::Now ())
         {
-          uint32_t nus = (Simulator::Now () - backoffStart).GetMicroSeconds ();
+    	  /// Time elapsed since access grant and backoff start
+    	  int64_t accessTime = (GetAccessGrantStart()-m_sifs).GetMicroSeconds();
+    	  int64_t diff = backoffStart.GetMicroSeconds();
+    	  int64_t idleTime = diff - accessTime;
+    	  /// Take the min between the actual DIFS value Standard. 9.2.10
+    	  /// and the actual time elapsed (e.g., the node tries to Tx after a DIFS since last busy channel)
+    	  Time difs = MicroSeconds(std::min (idleTime,(m_sifs + MicroSeconds(2*m_slotTimeUs)).GetMicroSeconds()));
+
+//    	  Time slots =  Simulator::Now() - GetAccessGrantStart() + m_sifs;
+//    	  slots = (slots > difs) ? slots-difs : Seconds(0);
+//    	  uint32_t nus = slots.GetMicroSeconds ();
+
+    	  uint32_t nus = (Simulator::Now () - backoffStart).GetMicroSeconds ();
           uint32_t nIntSlots = nus / m_slotTimeUs;
           uint32_t n = std::min (nIntSlots, state->GetBackoffSlots ());
           MY_DEBUG ("dcf " << k << " dec backoff slots=" << n);
+          // account DIFS+backoff
           Time backoffUpdateBound = backoffStart + MicroSeconds (n * m_slotTimeUs);
+          if (!m_backoffCallback.IsNull() && n)
+        	  m_backoffCallback (MicroSeconds (n * m_slotTimeUs));
+          if (!m_difsCallback.IsNull() && n)// && state->IsAccessRequested())
+		  {
+			  m_difsCallback (m_sifs + MicroSeconds(2*m_slotTimeUs));
+			  NS_ASSERT (difs.GetMicroSeconds()<=50);
+		  }
           state->UpdateBackoffSlotsNow (n, backoffUpdateBound);
         }
     }
@@ -605,13 +637,13 @@ DcfManager::NotifyRxStartNow (Time duration)
   m_lastRxDuration = duration;
   m_rxing = true;
 
-  if(GetAccessGrantStart()!=Simulator::Now())
+  if (!m_busyCallback.IsNull() &&
+		  m_lastRxStart>m_lastNavStart+m_lastNavDuration)//do not count channel busy by NAV
   {
-    NS_LOG_DEBUG("DURATION "<<m_lastRxDuration + m_sifs << " until "<< (m_lastNavStart+m_lastNavDuration) << " Access " << GetAccessGrantStart());
-    if (!m_busyCallback.IsNull())
-    	m_busyCallback (m_lastRxDuration + m_sifs);
+	  m_busyCallback(m_lastRxDuration);
   }
 }
+
 void
 DcfManager::NotifyRxEndOkNow (void)
 {
@@ -647,12 +679,19 @@ DcfManager::NotifyTxStartNow (Time duration)
   m_lastTxStart = Simulator::Now ();
   m_lastTxDuration = duration;
 
-  if(GetAccessGrantStart()!=Simulator::Now())
+  if (!m_busyCallback.IsNull())
   {
-  	if (!m_busyCallback.IsNull())
-  		m_busyCallback ((m_lastTxStart + m_lastTxDuration + m_sifs < GetAccessGrantStart() ?  m_lastTxDuration + m_sifs : (GetAccessGrantStart()-Simulator::Now())));
+	m_busyCallback (m_lastTxDuration); // Frame TX
+	// SIFS Count
+	//   The node has received a unicast frame,
+	//   it counts a SIFS before transmitting the ACK
+	if (m_lastRxStart + m_lastRxDuration == m_lastTxStart - m_sifs)
+	  {
+		  m_busyCallback(m_sifs);
+	  }
   }
 }
+
 void
 DcfManager::NotifyMaybeCcaBusyStartNow (Time duration)
 {
@@ -720,11 +759,8 @@ DcfManager::NotifySwitchingStartNow (Time duration)
   m_lastSwitchingStart = Simulator::Now ();
   m_lastSwitchingDuration = duration;
 
-  if(GetAccessGrantStart()!=Simulator::Now())
-  {
   	if (!m_busyCallback.IsNull())
   		m_busyCallback (m_lastSwitchingDuration);
-  }
 }
 
 void
@@ -742,13 +778,11 @@ DcfManager::NotifyNavResetNow (Time duration)
    * to restart a new access timeout.
    */
   DoRestartAccessTimeoutIfNeeded ();
-
-  if(GetAccessGrantStart()!=(m_lastNavStart+m_lastNavDuration+m_sifs))
-  {
-    if(!m_busyCallback.IsNull())
-    	m_busyCallback (m_lastNavDuration);
-  }
+	//There is a CTS/RTS or a ACK towards another node, here includes the SIFS + AckTxtime
+  if (!m_busyCallback.IsNull())
+	  m_busyCallback (m_lastNavDuration);
 }
+
 void
 DcfManager::NotifyNavStartNow (Time duration)
 {
@@ -758,15 +792,12 @@ DcfManager::NotifyNavStartNow (Time duration)
   Time newNavEnd = Simulator::Now () + duration;
   Time lastNavEnd = m_lastNavStart + m_lastNavDuration;
   if (newNavEnd > lastNavEnd)
-    {
-      m_lastNavStart = Simulator::Now ();
-      m_lastNavDuration = duration;
-    }
-  if(GetAccessGrantStart()!=(m_lastNavStart+m_lastNavDuration+m_sifs))
-  {
-    if (!m_busyCallback.IsNull())
-    	m_busyCallback (m_lastNavDuration);
-  }
+	{
+	  m_lastNavStart = Simulator::Now ();
+	  m_lastNavDuration = duration;
+	  if (!m_busyCallback.IsNull())//Count NAV only once, when changes.
+		m_busyCallback (m_lastNavDuration);
+	}
 }
 void
 DcfManager::NotifyAckTimeoutStartNow (Time duration)
@@ -778,6 +809,13 @@ void
 DcfManager::NotifyAckTimeoutResetNow ()
 {
   m_lastAckTimeoutEnd = Simulator::Now ();
+  // The node has transmitted a frame and has received the ACK, here count the SIFS between.
+  if (!m_busyCallback.IsNull())
+  {
+	  Time busy = m_lastRxStart - (m_lastTxStart + m_lastTxDuration);
+	  NS_ASSERT(busy.GetMicroSeconds()>0);
+	  m_busyCallback(busy);
+  }
   DoRestartAccessTimeoutIfNeeded ();
 }
 void

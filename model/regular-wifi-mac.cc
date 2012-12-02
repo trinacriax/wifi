@@ -54,6 +54,8 @@ RegularWifiMac::RegularWifiMac ()
   m_dcfManager = new DcfManager ();
   m_dcfManager->SetupLowListener (m_low);
   m_dcfManager->SetBusyCallback (MakeCallback (&RegularWifiMac::BusyChannel, this));
+  m_dcfManager->SetBackoffCallback (MakeCallback (&RegularWifiMac::BackoffChannel, this));
+  m_dcfManager->SetDIFSCallback (MakeCallback (&RegularWifiMac::DIFSChannel, this));
 
   m_dca = CreateObject<DcaTxop> ();
   m_dca->SetLow (m_low);
@@ -640,6 +642,13 @@ RegularWifiMac::GetTypeId (void)
 	.AddTraceSource ("BusyChannel",
 					 "Time the channel will be busy",
 					 MakeTraceSourceAccessor (&RegularWifiMac::m_busyCallback))
+	.AddTraceSource ("BackoffChannel",
+				     "Time the channel will be in backoff",
+					 MakeTraceSourceAccessor (&RegularWifiMac::m_backoffCallback))
+	.AddTraceSource ("DIFSChannel",
+					 "Time the channel will be in DIFS",
+					 MakeTraceSourceAccessor (&RegularWifiMac::m_difsCallback))
+;
   ;
 
   return tid;
@@ -715,6 +724,21 @@ RegularWifiMac::BusyChannel (const Time &duration)
 {
   NS_LOG_FUNCTION (this << duration);
   m_busyCallback (duration);
+}
+
+
+void
+RegularWifiMac::BackoffChannel (const Time &duration)
+{
+  NS_LOG_FUNCTION (this << duration);
+  m_backoffCallback (duration);
+}
+
+void
+RegularWifiMac::DIFSChannel (const Time &duration)
+{
+  NS_LOG_FUNCTION (this << duration);
+  m_difsCallback (duration);
 }
 
 } // namespace ns3

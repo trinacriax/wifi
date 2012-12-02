@@ -281,6 +281,8 @@ protected:
   virtual void TxOk (const WifiMacHeader &hdr);
   virtual void TxFailed (const WifiMacHeader &hdr);
   virtual void BusyChannel (const Time &duration);
+  virtual void BackoffChannel (const Time &duration);
+  virtual void DIFSChannel (const Time &duration);
 
   void ForwardUp (Ptr<Packet> packet, Mac48Address from, Mac48Address to);
 
@@ -349,6 +351,8 @@ private:
   TracedCallback<const WifiMacHeader &> m_txOkCallback;
   TracedCallback<const WifiMacHeader &> m_txErrCallback;
   TracedCallback<const Time &> m_busyCallback;
+  TracedCallback<const Time &> m_backoffCallback;
+  TracedCallback<const Time &> m_difsCallback;
 };
 
 } // namespace ns3

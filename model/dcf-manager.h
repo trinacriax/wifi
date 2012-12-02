@@ -177,10 +177,14 @@ public:
   ~DcfManager ();
 
   typedef Callback <void, const Time &> BusyChannel;
+  typedef Callback <void, const Time &> BackoffChannel;
+  typedef Callback <void, const Time &> DIFSChannel;
 
   void SetupPhyListener (Ptr<WifiPhy> phy);
   void SetupLowListener (Ptr<MacLow> low);
   void SetBusyCallback (BusyChannel callback);
+  void SetBackoffCallback (BackoffChannel callback);
+  void SetDIFSCallback (DIFSChannel callback);
 
   /**
    * \param slotTime the duration of a slot.
@@ -335,6 +339,8 @@ private:
   PhyListener* m_phyListener;
   LowDcfListener* m_lowListener;
   BusyChannel m_busyCallback;
+  BackoffChannel m_backoffCallback;
+  DIFSChannel m_difsCallback;
 };
 
 } // namespace ns3
