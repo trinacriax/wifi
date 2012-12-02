@@ -67,10 +67,10 @@ RegularWifiMac::RegularWifiMac ()
   // Construct the EDCAFs. The ordering is important - highest
   // priority (see Table 9-1 in IEEE 802.11-2007) must be created
   // first.
-  SetupEdcaQueue (AC_VO);
-  SetupEdcaQueue (AC_VI);
-  SetupEdcaQueue (AC_BE);
-  SetupEdcaQueue (AC_BK);
+//  SetupEdcaQueue (AC_VO);
+//  SetupEdcaQueue (AC_VI);
+//  SetupEdcaQueue (AC_BE);
+//  SetupEdcaQueue (AC_BK);
 }
 
 RegularWifiMac::~RegularWifiMac ()
