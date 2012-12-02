@@ -330,6 +330,8 @@ private:
   Time m_lastBusyDuration;
   Time m_lastSwitchingStart;
   Time m_lastSwitchingDuration;
+  Time m_lastAccessRequest;
+  Time m_lastBackoffStart;
   bool m_rxing;
   bool m_sleeping;
   Time m_eifsNoDifs;

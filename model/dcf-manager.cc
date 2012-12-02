@@ -267,6 +267,8 @@ DcfManager::DcfManager ()
     m_lastBusyDuration (MicroSeconds (0)),
     m_lastSwitchingStart (MicroSeconds (0)),
     m_lastSwitchingDuration (MicroSeconds (0)),
+    m_lastAccessRequest (MicroSeconds (0)),
+    m_lastBackoffStart (MicroSeconds (0)),
     m_rxing (false),
     m_slotTimeUs (0),
     m_sifs (Seconds (0.0)),
@@ -414,6 +416,8 @@ DcfManager::RequestAccess (DcfState *state)
   UpdateBackoff ();
   NS_ASSERT (!state->IsAccessRequested ());
   state->NotifyAccessRequested ();
+  if (m_lastAccessRequest.IsZero())
+	  m_lastAccessRequest = Simulator::Now();
   /**
    * If there is a collision, generate a backoff
    * by notifying the collision to the user.
@@ -474,6 +478,8 @@ DcfManager::DoGrantAccess (void)
            * the result of the calculations.
            */
           state->NotifyAccessGranted ();
+          if (m_lastAccessRequest.IsStrictlyPositive())
+        	  m_lastAccessRequest = Seconds(0);
           for (std::vector<DcfState *>::const_iterator k = internalCollisionStates.begin ();
                k != internalCollisionStates.end (); k++)
             {
@@ -515,6 +521,7 @@ DcfManager::GetAccessGrantStart (void) const
   Time ackTimeoutAccessStart = m_lastAckTimeoutEnd + m_sifs;
   Time ctsTimeoutAccessStart = m_lastCtsTimeoutEnd + m_sifs;
   Time switchingAccessStart = m_lastSwitchingStart + m_lastSwitchingDuration + m_sifs;
+  Time lastAccessRequest = m_lastAccessRequest + m_sifs;
   Time accessGrantedStart = MostRecent (rxAccessStart,
                                         busyAccessStart,
                                         txAccessStart,
@@ -523,11 +530,13 @@ DcfManager::GetAccessGrantStart (void) const
                                         ctsTimeoutAccessStart,
                                         switchingAccessStart
                                         );
+//  accessGrantedStart = MostRecent(accessGrantedStart, lastAccessRequest);
   NS_LOG_INFO ("access grant start=" << accessGrantedStart <<
                ", rx access start=" << rxAccessStart <<
                ", busy access start=" << busyAccessStart <<
                ", tx access start=" << txAccessStart <<
-               ", nav access start=" << navAccessStart);
+               ", nav access start=" << navAccessStart <<
+               ", access request="<<m_lastAccessRequest);
   return accessGrantedStart;
 }
 
@@ -555,6 +564,8 @@ DcfManager::UpdateBackoff (void)
       DcfState *state = *i;
 
       Time backoffStart = GetBackoffStartFor (state);
+      if (m_lastBackoffStart.IsZero())
+    	  m_lastBackoffStart = MostRecent(Simulator::Now(),backoffStart);
       if (backoffStart <= Simulator::Now ())
         {
     	  /// Time elapsed since access grant and backoff start
