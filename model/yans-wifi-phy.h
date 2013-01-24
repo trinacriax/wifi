@@ -40,8 +40,6 @@
 
 namespace ns3 {
 
-class RandomUniform;
-class RxEvent;
 class YansWifiChannel;
 class WifiPhyStateHelper;
 

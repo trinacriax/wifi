@@ -24,6 +24,7 @@
 #include "wifi-preamble.h"
 #include "wifi-phy-state-helper.h"
 #include "error-rate-model.h"
+#include "snr-tag.h"
 #include "ns3/simulator.h"
 #include "ns3/packet.h"
 #include "ns3/assert.h"
@@ -34,8 +35,7 @@
 #include "ns3/pointer.h"
 #include "ns3/net-device.h"
 #include "ns3/trace-source-accessor.h"
-#include <math.h>
-#include "snr-tag.h"
+#include <cmath>
 
 NS_LOG_COMPONENT_DEFINE ("YansWifiPhy");
 
@@ -727,27 +727,27 @@ YansWifiPhy::GetLastRxStartTime (void) const
 double
 YansWifiPhy::DbToRatio (double dB) const
 {
-  double ratio = pow (10.0,dB / 10.0);
+  double ratio = std::pow (10.0, dB / 10.0);
   return ratio;
 }
 
 double
 YansWifiPhy::DbmToW (double dBm) const
 {
-  double mW = pow (10.0,dBm / 10.0);
+  double mW = std::pow (10.0, dBm / 10.0);
   return mW / 1000.0;
 }
 
 double
 YansWifiPhy::WToDbm (double w) const
 {
-  return 10.0 * log10 (w * 1000.0);
+  return 10.0 * std::log10 (w * 1000.0);
 }
 
 double
 YansWifiPhy::RatioToDb (double ratio) const
 {
-  return 10.0 * log10 (ratio);
+  return 10.0 * std::log10 (ratio);
 }
 
 double

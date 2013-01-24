@@ -21,7 +21,7 @@
 #include "ns3/assert.h"
 #include "ns3/log.h"
 #include "ns3/simulator.h"
-#include <math.h>
+#include <cmath>
 
 #include "dcf-manager.h"
 #include "wifi-phy.h"
@@ -521,7 +521,7 @@ DcfManager::GetAccessGrantStart (void) const
   Time ackTimeoutAccessStart = m_lastAckTimeoutEnd + m_sifs;
   Time ctsTimeoutAccessStart = m_lastCtsTimeoutEnd + m_sifs;
   Time switchingAccessStart = m_lastSwitchingStart + m_lastSwitchingDuration + m_sifs;
-  Time lastAccessRequest = m_lastAccessRequest + m_sifs;
+  //Time lastAccessRequest = m_lastAccessRequest + m_sifs;
   Time accessGrantedStart = MostRecent (rxAccessStart,
                                         busyAccessStart,
                                         txAccessStart,
@@ -624,8 +624,6 @@ DcfManager::DoRestartAccessTimeoutIfNeeded (void)
     {
       MY_DEBUG ("expected backoff end=" << expectedBackoffEnd);
       Time expectedBackoffDelay = expectedBackoffEnd - Simulator::Now ();
-      Time difs = (expectedBackoffEnd - GetAccessGrantStart() + m_sifs);///REMOVE
-
       if (m_accessTimeout.IsRunning ()
           && Simulator::GetDelayLeft (m_accessTimeout) > expectedBackoffDelay)
         {
